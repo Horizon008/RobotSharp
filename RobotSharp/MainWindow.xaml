@@ -10,7 +10,7 @@
         <Image x:Name="CameraImage" Stretch="Uniform"
                HorizontalAlignment="Center" VerticalAlignment="Center"/>
         <Button x:Name="StartStopButton" Content="начать" 
-                Width="100" Height="30" Margin="10"
+                Width="163" Height="30" Margin="10,10,0,0"
                 HorizontalAlignment="Left" VerticalAlignment="Top"
                 Click="StartStopButton_Click"/>
     </Grid>
