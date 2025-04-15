@@ -53,8 +53,12 @@ namespace RobotSharpV2
                             _capture.Read(frame);
                             if (!frame.IsEmpty)
                             {
-                                var processedFrame = ProcessFrame(frame);
-                                Dispatcher.Invoke(() => UpdateUI(processedFrame));
+                                var processedFrame = ProcessFrame(frame, out Mat maskFrame);
+                                Dispatcher.Invoke(() =>
+                                {
+                                    UpdateUI(processedFrame);
+                                    UpdateMaskUI(maskFrame); 
+                                });
                             }
                         }
                         await Task.Delay(30);
@@ -68,15 +72,18 @@ namespace RobotSharpV2
             }
         }
 
-        private Mat ProcessFrame(Mat inputFrame)
+        private Mat ProcessFrame(Mat inputFrame, out Mat maskFrame)
         {
             var outputFrame = inputFrame.Clone();
+            maskFrame = new Mat();
 
             using (Mat grayFrame = new Mat())
             using (Mat thresholdFrame = new Mat())
             {
                 CvInvoke.CvtColor(inputFrame, grayFrame, ColorConversion.Bgr2Gray);
                 CvInvoke.Threshold(grayFrame, thresholdFrame, 100, 255, ThresholdType.Binary);
+
+                maskFrame = thresholdFrame.Clone();
 
                 using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
                 {
@@ -105,6 +112,11 @@ namespace RobotSharpV2
         private void UpdateUI(Mat frame)
         {
             CameraImage.Source = ToBitmapSource(frame);
+        }
+
+        private void UpdateMaskUI(Mat mask)
+        {
+            MaskImage.Source = ToBitmapSource(mask);
         }
 
         private BitmapSource ToBitmapSource(Mat frame)

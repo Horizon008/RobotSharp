@@ -11,9 +11,12 @@
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
-
-        <Image x:Name="CameraImage" Grid.Row="0" Stretch="Uniform"/>
-
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <Image x:Name="CameraImage" Grid.Row="0" Grid.Column="0" Stretch="Uniform"/>
+        <Image x:Name="MaskImage" Grid.Row="0" Grid.Column="1" Stretch="Uniform" Margin="10"/>
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
             <Button x:Name="StartStopButton" Content="СТАРТ" 
                  Click="StartStopButton_Click" Width="100" Margin="5"/>
