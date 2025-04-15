@@ -96,10 +96,12 @@ namespace RobotSharpV2
                 
                 CvInvoke.Threshold(grayFrame, thresholdFrame, _binarizationLevel, 255, ThresholdType.Binary);
 
-                
+                //CvInvoke.AdaptiveThreshold(grayFrame, thresholdFrame, 500, AdaptiveThresholdType.GaussianC, ThresholdType.BinaryInv, 11, 3);
                 CvInvoke.MedianBlur(thresholdFrame, medianFilteredFrame, 5);
                 thresholdFrame = medianFilteredFrame.Clone();
                 var kernel = CvInvoke.GetStructuringElement(ElementShape.Rectangle, new System.Drawing.Size(3, 3), new System.Drawing.Point(-1, -1));
+                CvInvoke.MorphologyEx(thresholdFrame, dilatedFrame, MorphOp.Open, kernel, new System.Drawing.Point(-1, -1), 1, BorderType.Constant, new MCvScalar(0));
+
                 CvInvoke.Dilate(thresholdFrame, dilatedFrame, kernel, new System.Drawing.Point(-1, -1), 1, BorderType.Constant, new MCvScalar(1));
                 CvInvoke.Erode(dilatedFrame, erodedFrame, kernel, new System.Drawing.Point(-1, -1), 1, BorderType.Constant, new MCvScalar(1));
                 thresholdFrame = erodedFrame.Clone(); 
