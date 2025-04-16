@@ -12,6 +12,7 @@ namespace RobotSharpV2
 {
     public partial class MainWindow : Window
     {
+        private string movementDirection = "";
         private VideoCapture _capture;
         private bool _isCapturing;
         private Mat _currentFrame = new Mat();
@@ -121,14 +122,15 @@ namespace RobotSharpV2
                         if (CvInvoke.ContourArea(contour) > 500)
                         {
                             var moments = CvInvoke.Moments(contour);
+                            if (moments.M00 == 0) continue; 
+
                             int centerX = (int)(moments.M10 / moments.M00);
                             int centerY = (int)(moments.M01 / moments.M00);
-
                             var currentCenter = new System.Drawing.Point(centerX, centerY);
 
                             CvInvoke.Circle(outputFrame, currentCenter, 5, new MCvScalar(0, 0, 255), -1);
 
-                            string movementDirection = "Ожидание...";
+                         
                             if (_previousHandCenter != null)
                             {
                                 int dx = currentCenter.X - _previousHandCenter.Value.X;
@@ -152,16 +154,28 @@ namespace RobotSharpV2
 
                             _previousHandCenter = currentCenter;
 
-                            // Обновление метки направления в UI
                             Dispatcher.Invoke(() =>
                             {
                                 MovementLabel.Text = $"Движение: {movementDirection}";
                             });
 
-                            // Поиск пальцев
+                            // Поиск пальцев и подсветка
                             var hull = new VectorOfPoint();
                             CvInvoke.ConvexHull(contour, hull, false);
-                            fingerCount += CountFingersUsingAngles(hull);
+
+                            List<System.Windows.Point> fingertips;
+                            fingerCount += CountFingersUsingAngles(hull, out fingertips);
+
+                            for (int j = 0; j < fingertips.Count; j++)
+                            {
+                                var pt = fingertips[j];
+                                var drawingPoint = new System.Drawing.Point((int)pt.X, (int)pt.Y);
+
+                                CvInvoke.Circle(outputFrame, drawingPoint, 6, new MCvScalar(255, 0, 0), 2);
+                                //CvInvoke.PutText(outputFrame, $"{j + 1}",
+                                //    new System.Drawing.Point(drawingPoint.X + 10, drawingPoint.Y),
+                                //    FontFace.HersheySimplex, 0.5, new MCvScalar(255, 255, 0), 1); 
+                            }
                         }
                     }
 
@@ -184,16 +198,16 @@ namespace RobotSharpV2
         }
 
 
-        private int CountFingersUsingAngles(VectorOfPoint contour)
+
+        private int CountFingersUsingAngles(VectorOfPoint contour, out List<System.Windows.Point> fingertipPoints)
         {
             int fingerCount = 0;
+            fingertipPoints = new List<System.Windows.Point>();
 
             var hull = new VectorOfPoint();
             CvInvoke.ConvexHull(contour, hull, false);
 
             System.Drawing.Point[] hullPoints = hull.ToArray();
-
-            
             if (hullPoints.Length < 5)
                 return fingerCount;
 
@@ -203,7 +217,6 @@ namespace RobotSharpV2
                 wpfHullPoints[i] = new System.Windows.Point(hullPoints[i].X, hullPoints[i].Y);
             }
 
-           
             for (int i = 0; i < wpfHullPoints.Length; i++)
             {
                 System.Windows.Point pt1 = wpfHullPoints[i];
@@ -212,42 +225,35 @@ namespace RobotSharpV2
 
                 double angle = GetAngle(pt1, pt2, pt3);
 
-                
-                if (angle > 45) 
+                if (angle > 45)
                 {
-                   
                     System.Windows.Point pt4 = wpfHullPoints[(i + 3) % wpfHullPoints.Length];
-
                     double angleAfter = GetAngle(pt2, pt3, pt4);
 
-                   
                     if (Math.Abs(angleAfter - 180) < 20)
                     {
-                        
                         double distance = GetDistance(pt1, pt3);
 
-         
-                        if (distance < 50) 
+                        if (distance < 50)
                         {
+                            fingertipPoints.Add(pt2);
                             fingerCount++;
                         }
                     }
                 }
             }
 
-           
             double contourPerimeter = CvInvoke.ArcLength(contour, true);
             double contourArea = CvInvoke.ContourArea(contour);
 
-         
             if (contourArea > 500 && contourPerimeter / contourArea > 5)
             {
-                
                 fingerCount++;
             }
 
             return fingerCount;
         }
+
 
         private double GetDistance(System.Windows.Point pt1, System.Windows.Point pt2)
         {
