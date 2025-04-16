@@ -15,7 +15,8 @@ namespace RobotSharpV2
         private VideoCapture _capture;
         private bool _isCapturing;
         private Mat _currentFrame = new Mat();
-        private int _binarizationLevel = 100; 
+        private int _binarizationLevel = 100;
+        private System.Drawing.Point? _previousHandCenter = null;
 
         [DllImport("gdi32.dll")]
         private static extern bool DeleteObject(IntPtr handle);
@@ -80,7 +81,6 @@ namespace RobotSharpV2
             maskFrame = new Mat();
             fingerCount = 0;
 
-            
             Mat grayFrame = new Mat();
             Mat thresholdFrame = new Mat();
             Mat blurredFrame = new Mat();
@@ -90,23 +90,18 @@ namespace RobotSharpV2
 
             try
             {
-                
                 CvInvoke.CvtColor(inputFrame, grayFrame, ColorConversion.Bgr2Gray);
-
-                
                 CvInvoke.Threshold(grayFrame, thresholdFrame, _binarizationLevel, 255, ThresholdType.Binary);
 
-                //CvInvoke.AdaptiveThreshold(grayFrame, thresholdFrame, 500, AdaptiveThresholdType.GaussianC, ThresholdType.BinaryInv, 11, 3);
                 CvInvoke.MedianBlur(thresholdFrame, medianFilteredFrame, 5);
                 thresholdFrame = medianFilteredFrame.Clone();
+
                 var kernel = CvInvoke.GetStructuringElement(ElementShape.Rectangle, new System.Drawing.Size(3, 3), new System.Drawing.Point(-1, -1));
                 CvInvoke.MorphologyEx(thresholdFrame, dilatedFrame, MorphOp.Open, kernel, new System.Drawing.Point(-1, -1), 1, BorderType.Constant, new MCvScalar(0));
-
                 CvInvoke.Dilate(thresholdFrame, dilatedFrame, kernel, new System.Drawing.Point(-1, -1), 1, BorderType.Constant, new MCvScalar(1));
                 CvInvoke.Erode(dilatedFrame, erodedFrame, kernel, new System.Drawing.Point(-1, -1), 1, BorderType.Constant, new MCvScalar(1));
-                thresholdFrame = erodedFrame.Clone(); 
+                thresholdFrame = erodedFrame.Clone();
 
-                
                 maskFrame = thresholdFrame.Clone();
 
                 using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
@@ -119,36 +114,65 @@ namespace RobotSharpV2
                         RetrType.External,
                         ChainApproxMethod.ChainApproxSimple);
 
-           
                     for (int i = 0; i < contours.Size; i++)
                     {
                         var contour = contours[i];
 
                         if (CvInvoke.ContourArea(contour) > 500)
                         {
-                            
+                            var moments = CvInvoke.Moments(contour);
+                            int centerX = (int)(moments.M10 / moments.M00);
+                            int centerY = (int)(moments.M01 / moments.M00);
+
+                            var currentCenter = new System.Drawing.Point(centerX, centerY);
+
+                            CvInvoke.Circle(outputFrame, currentCenter, 5, new MCvScalar(0, 0, 255), -1);
+
+                            string movementDirection = "Ожидание...";
+                            if (_previousHandCenter != null)
+                            {
+                                int dx = currentCenter.X - _previousHandCenter.Value.X;
+                                int dy = currentCenter.Y - _previousHandCenter.Value.Y;
+
+                                if (Math.Abs(dx) > Math.Abs(dy))
+                                {
+                                    if (dx > 15)
+                                        movementDirection = "Вправо";
+                                    else if (dx < -15)
+                                        movementDirection = "Влево";
+                                }
+                                else
+                                {
+                                    if (dy > 15)
+                                        movementDirection = "Вниз";
+                                    else if (dy < -15)
+                                        movementDirection = "Вверх";
+                                }
+                            }
+
+                            _previousHandCenter = currentCenter;
+
+                            // Обновление метки направления в UI
+                            Dispatcher.Invoke(() =>
+                            {
+                                MovementLabel.Text = $"Движение: {movementDirection}";
+                            });
+
+                            // Поиск пальцев
                             var hull = new VectorOfPoint();
                             CvInvoke.ConvexHull(contour, hull, false);
-
-                            
                             fingerCount += CountFingersUsingAngles(hull);
                         }
                     }
 
                     for (int i = 0; i < contours.Size; i++)
                     {
-                        CvInvoke.DrawContours(
-                            outputFrame,
-                            contours,
-                            i,
-                            new MCvScalar(0, 255, 0),
-                            2);
+                        CvInvoke.DrawContours(outputFrame, contours, i, new MCvScalar(0, 255, 0), 2);
                     }
                 }
             }
             finally
             {
-                
                 grayFrame.Dispose();
                 blurredFrame.Dispose();
                 medianFilteredFrame.Dispose();
@@ -158,6 +182,7 @@ namespace RobotSharpV2
 
             return outputFrame;
         }
+
 
         private int CountFingersUsingAngles(VectorOfPoint contour)
         {

@@ -17,11 +17,7 @@
         </Grid.ColumnDefinitions>
         <Image x:Name="CameraImage" Grid.Row="0" Grid.Column="0" Stretch="Uniform"/>
         <Image x:Name="MaskImage" Grid.Row="0" Grid.Column="1" Stretch="Uniform" Margin="10"/>
-        <Slider x:Name="BinarizationSlider" Grid.Row="1" Grid.Column="1" 
-                Minimum="0" Maximum="255" Value="100" TickFrequency="5"
-                IsSnapToTickEnabled="True" VerticalAlignment="Center"
-                Width="200" Margin="181,0,19,0" 
-                ValueChanged="BinarizationSlider_ValueChanged"/>
+       
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
             <Button x:Name="StartStopButton" Content="СТАРТ" 
                  Click="StartStopButton_Click" Width="100"/>
@@ -29,6 +25,15 @@
                     Margin="10" VerticalAlignment="Center"/>
             <TextBlock x:Name="FrameRate" Foreground="Blue" FontSize="14"
                     Margin="10" VerticalAlignment="Center"/>
+        </StackPanel>
+        <StackPanel Grid.Row="1" Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+            <TextBlock x:Name="MovementLabel" FontSize="16" Margin="10" Foreground="Blue"/>
+
+            <Slider x:Name="BinarizationSlider" Grid.Row="1" Grid.Column="1" 
+         Minimum="0" Maximum="255" Value="100" TickFrequency="5"
+         IsSnapToTickEnabled="True" VerticalAlignment="Center"
+         Width="200" Margin="181,0,19,0" 
+         ValueChanged="BinarizationSlider_ValueChanged"/>
         </StackPanel>
     </Grid>
 </Window>
