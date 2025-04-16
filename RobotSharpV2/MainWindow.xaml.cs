@@ -93,7 +93,7 @@ namespace RobotSharpV2
             {
                 CvInvoke.CvtColor(inputFrame, grayFrame, ColorConversion.Bgr2Gray);
                 CvInvoke.Threshold(grayFrame, thresholdFrame, _binarizationLevel, 255, ThresholdType.Binary);
-
+                CvInvoke.GaussianBlur(inputFrame, grayFrame, new System.Drawing.Size(5, 5), 1.5);
                 CvInvoke.MedianBlur(thresholdFrame, medianFilteredFrame, 5);
                 thresholdFrame = medianFilteredFrame.Clone();
 
