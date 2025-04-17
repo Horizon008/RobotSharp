@@ -93,11 +93,11 @@ namespace RobotSharpV2
             {
                 CvInvoke.CvtColor(inputFrame, grayFrame, ColorConversion.Bgr2Gray);
                 CvInvoke.Threshold(grayFrame, thresholdFrame, _binarizationLevel, 255, ThresholdType.Binary);
-                CvInvoke.GaussianBlur(inputFrame, grayFrame, new System.Drawing.Size(5, 5), 1.5);
+                CvInvoke.GaussianBlur(inputFrame, grayFrame, new System.Drawing.Size(3, 3), 1);
                 CvInvoke.MedianBlur(thresholdFrame, medianFilteredFrame, 5);
                 thresholdFrame = medianFilteredFrame.Clone();
 
-                var kernel = CvInvoke.GetStructuringElement(ElementShape.Rectangle, new System.Drawing.Size(3, 3), new System.Drawing.Point(-1, -1));
+                var kernel = CvInvoke.GetStructuringElement(ElementShape.Rectangle, new System.Drawing.Size(7, 7), new System.Drawing.Point(-1, -1));
                 CvInvoke.MorphologyEx(thresholdFrame, dilatedFrame, MorphOp.Open, kernel, new System.Drawing.Point(-1, -1), 1, BorderType.Constant, new MCvScalar(0));
                 CvInvoke.Dilate(thresholdFrame, dilatedFrame, kernel, new System.Drawing.Point(-1, -1), 1, BorderType.Constant, new MCvScalar(1));
                 CvInvoke.Erode(dilatedFrame, erodedFrame, kernel, new System.Drawing.Point(-1, -1), 1, BorderType.Constant, new MCvScalar(1));
@@ -119,10 +119,10 @@ namespace RobotSharpV2
                     {
                         var contour = contours[i];
 
-                        if (CvInvoke.ContourArea(contour) > 500)
+                        if (CvInvoke.ContourArea(contour) > 300) 
                         {
                             var moments = CvInvoke.Moments(contour);
-                            if (moments.M00 == 0) continue; 
+                            if (moments.M00 == 0) continue;
 
                             int centerX = (int)(moments.M10 / moments.M00);
                             int centerY = (int)(moments.M01 / moments.M00);
@@ -130,7 +130,6 @@ namespace RobotSharpV2
 
                             CvInvoke.Circle(outputFrame, currentCenter, 5, new MCvScalar(0, 0, 255), -1);
 
-                         
                             if (_previousHandCenter != null)
                             {
                                 int dx = currentCenter.X - _previousHandCenter.Value.X;
@@ -159,7 +158,6 @@ namespace RobotSharpV2
                                 MovementLabel.Text = $"Движение: {movementDirection}";
                             });
 
-                            // Поиск пальцев и подсветка
                             var hull = new VectorOfPoint();
                             CvInvoke.ConvexHull(contour, hull, false);
 
@@ -172,9 +170,6 @@ namespace RobotSharpV2
                                 var drawingPoint = new System.Drawing.Point((int)pt.X, (int)pt.Y);
 
                                 CvInvoke.Circle(outputFrame, drawingPoint, 6, new MCvScalar(255, 0, 0), 2);
-                                //CvInvoke.PutText(outputFrame, $"{j + 1}",
-                                //    new System.Drawing.Point(drawingPoint.X + 10, drawingPoint.Y),
-                                //    FontFace.HersheySimplex, 0.5, new MCvScalar(255, 255, 0), 1); 
                             }
                         }
                     }
@@ -199,6 +194,7 @@ namespace RobotSharpV2
 
 
 
+
         private int CountFingersUsingAngles(VectorOfPoint contour, out List<System.Windows.Point> fingertipPoints)
         {
             int fingerCount = 0;
@@ -208,7 +204,7 @@ namespace RobotSharpV2
             CvInvoke.ConvexHull(contour, hull, false);
 
             System.Drawing.Point[] hullPoints = hull.ToArray();
-            if (hullPoints.Length < 5)
+            if (hullPoints.Length < 5) 
                 return fingerCount;
 
             System.Windows.Point[] wpfHullPoints = new System.Windows.Point[hullPoints.Length];
@@ -243,16 +239,18 @@ namespace RobotSharpV2
                 }
             }
 
+          
             double contourPerimeter = CvInvoke.ArcLength(contour, true);
             double contourArea = CvInvoke.ContourArea(contour);
 
-            if (contourArea > 500 && contourPerimeter / contourArea > 5)
+            if (contourArea > 200 && contourPerimeter / contourArea > 5)
             {
                 fingerCount++;
             }
 
             return fingerCount;
         }
+
 
 
         private double GetDistance(System.Windows.Point pt1, System.Windows.Point pt2)
