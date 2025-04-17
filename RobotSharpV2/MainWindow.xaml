@@ -21,8 +21,6 @@
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
             <Button x:Name="StartStopButton" Content="СТАРТ" 
                  Click="StartStopButton_Click" Width="100"/>
-            <TextBlock x:Name="GestureStatus" Foreground="DarkRed" FontSize="16"
-                    Margin="10" VerticalAlignment="Center"/>
             <TextBlock x:Name="FrameRate" Foreground="Blue" FontSize="14"
                     Margin="10" VerticalAlignment="Center"/>
         </StackPanel>

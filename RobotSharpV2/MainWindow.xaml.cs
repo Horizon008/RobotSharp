@@ -42,13 +42,6 @@ namespace RobotSharpV2
                 await StartCaptureAsync();
             }
         }
-
-        private void CalibrateButton_Click(object sender, RoutedEventArgs e)
-        {
-            _calibrationMode = true;
-            MessageBox.Show("Пожалуйста, поместите руку в центр экрана для калибровки цвета кожи.");
-        }
-
         private async Task StartCaptureAsync()
         {
             try
@@ -75,7 +68,6 @@ namespace RobotSharpV2
                                 {
                                     UpdateUI(processedFrame);
                                     UpdateMaskUI(maskFrame);
-                                    GestureStatus.Text = $"Количество пальцев: {fingerCount}";
                                     MovementLabel.Text = $"Движение: {movementDirection}";
                                 });
                             }
@@ -130,26 +122,24 @@ namespace RobotSharpV2
             CvInvoke.Merge(labChannels, lab);
             CvInvoke.CvtColor(lab, inputFrame, ColorConversion.Lab2Bgr);
 
-            if (_calibrationMode)
-            {
-                System.Drawing.Rectangle roi = new System.Drawing.Rectangle(
-                    inputFrame.Width / 2 - 50,
-                    inputFrame.Height / 2 - 50,
-                    100, 100);
+            //if (_calibrationMode)
+            //{
+            //    System.Drawing.Rectangle roi = new System.Drawing.Rectangle(
+            //        inputFrame.Width / 2 - 50,
+            //        inputFrame.Height / 2 - 50,
+            //        100, 100);
 
-                using (Mat calibrationRoi = new Mat(inputFrame, roi))
-                {
-                    CalibrateSkinColor(calibrationRoi);
-                }
-                _calibrationMode = false;
-                MessageBox.Show("Калибровка завершена!");
-            }
+            //    using (Mat calibrationRoi = new Mat(inputFrame, roi))
+            //    {
+            //        CalibrateSkinColor(calibrationRoi);
+            //    }
+            //    _calibrationMode = false;
+            //    MessageBox.Show("Калибровка завершена!");
+            //}
 
-            // Фильтрация кожи
             Mat skinMask = FilterSkin(inputFrame);
             CvInvoke.BitwiseAnd(inputFrame, inputFrame, outputFrame, skinMask);
 
-            // Поиск контуров
             using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
             {
                 Mat hierarchy = new Mat();
