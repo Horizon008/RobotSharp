@@ -16,8 +16,8 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
         <Image x:Name="CameraImage" Grid.Row="0" Grid.Column="0" Stretch="Uniform"/>
-        <Image x:Name="MaskImage" Grid.Row="0" Grid.Column="1" Stretch="Uniform" Margin="10"/>
-       
+        <Image x:Name="MaskImage" Grid.Row="0" Grid.Column="1" Stretch="Uniform" Margin="0,0,0,0"/>
+
         <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
             <Button x:Name="StartStopButton" Content="СТАРТ" 
                  Click="StartStopButton_Click" Width="100"/>
