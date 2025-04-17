@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Windows.Shapes;
+using System.Windows.Threading;
 using Emgu.CV;
 using Emgu.CV.CvEnum;
 using Emgu.CV.Structure;
@@ -22,6 +26,13 @@ namespace RobotSharpV2
         private ScalarArray _upperSkinColor = new ScalarArray(new MCvScalar(20, 255, 255));
         private bool _calibrationMode = false;
         private int _binarizationLevel = 100;
+        private DispatcherTimer _gameTimer;
+        private List<Rectangle> _snakeParts = new();
+        private System.Windows.Point _snakeDirection = new(1, 0);
+        private int _cellSize = 20;
+        private System.Windows.Point _foodPosition;
+        private Rectangle _food;
+
 
         [DllImport("gdi32.dll")]
         private static extern bool DeleteObject(IntPtr handle);
@@ -277,7 +288,7 @@ namespace RobotSharpV2
             if (Math.Sqrt(dx * dx + dy * dy) > 15) 
             {
                 if (Math.Abs(dx) > Math.Abs(dy))
-                    movementDirection = dx > 0 ? "Вправо" : "Влево";
+                    movementDirection = dx > 0 ? "Влево" : "Вправо";
                 else
                     movementDirection = dy > 0 ? "Вниз" : "Вверх";
             }
@@ -328,5 +339,137 @@ namespace RobotSharpV2
             base.OnClosed(e);
             StopCapture();
         }
+        private void SnakeGameButton_Click(object sender, RoutedEventArgs e)
+        {
+            StartSnakeGame();
+        }
+
+        private void StartSnakeGame()
+        {
+            GameCanvas.Visibility = Visibility.Visible;
+            GameCanvas.Children.Clear();
+            _snakeParts.Clear();
+
+            var start = new Rectangle
+            {
+                Width = _cellSize,
+                Height = _cellSize,
+                Fill = Brushes.Lime
+            };
+
+            Canvas.SetLeft(start, 100);
+            Canvas.SetTop(start, 100);
+            GameCanvas.Children.Add(start);
+            _snakeParts.Add(start);
+
+            _snakeDirection = new System.Windows.Point(1, 0);
+            SpawnFood();
+
+            _gameTimer = new DispatcherTimer();
+            _gameTimer.Interval = TimeSpan.FromMilliseconds(150);
+            _gameTimer.Tick += GameLoop;
+            _gameTimer.Start();
+        }
+
+        private void GameLoop(object sender, EventArgs e)
+        {
+            UpdateSnakeDirectionFromCamera();
+
+            var head = _snakeParts.First();
+            double x = Canvas.GetLeft(head) + _snakeDirection.X * _cellSize;
+            double y = Canvas.GetTop(head) + _snakeDirection.Y * _cellSize;
+
+            if (x < 0 || y < 0 || x >= GameCanvas.ActualWidth || y >= GameCanvas.ActualHeight)
+            {
+                GameOver();
+                return;
+            }
+
+            foreach (var part in _snakeParts.Skip(1))
+            {
+                if (Math.Abs(Canvas.GetLeft(part) - x) < _cellSize &&
+                    Math.Abs(Canvas.GetTop(part) - y) < _cellSize)
+                {
+                    GameOver();
+                    return;
+                }
+            }
+
+            var newHead = new Rectangle
+            {
+                Width = _cellSize,
+                Height = _cellSize,
+                Fill = Brushes.LimeGreen
+            };
+
+            Canvas.SetLeft(newHead, x);
+            Canvas.SetTop(newHead, y);
+            GameCanvas.Children.Add(newHead);
+            _snakeParts.Insert(0, newHead);
+
+            if (Math.Abs(x - _foodPosition.X) < _cellSize && Math.Abs(y - _foodPosition.Y) < _cellSize)
+            {
+                SpawnFood();
+            }
+            else
+            {
+                var tail = _snakeParts.Last();
+                GameCanvas.Children.Remove(tail);
+                _snakeParts.Remove(tail);
+            }
+        }
+
+        private void UpdateSnakeDirectionFromCamera()
+        {
+            switch (movementDirection)
+            {
+                case "Вверх":
+                    if (_snakeDirection != new System.Windows.Point(0, 1))
+                        _snakeDirection = new System.Windows.Point(0, -1);
+                    break;
+                case "Вниз":
+                    if (_snakeDirection != new System.Windows.Point(0, -1))
+                        _snakeDirection = new System.Windows.Point(0, 1);
+                    break;
+                case "Влево":
+                    if (_snakeDirection != new System.Windows.Point(1, 0))
+                        _snakeDirection = new System.Windows.Point(-1, 0);
+                    break;
+                case "Вправо":
+                    if (_snakeDirection != new System.Windows.Point(-1, 0))
+                        _snakeDirection = new System.Windows.Point(1, 0);
+                    break;
+            }
+        }
+
+        private void SpawnFood()
+        {
+            if (_food != null)
+                GameCanvas.Children.Remove(_food);
+
+            Random rand = new Random();
+            _foodPosition = new System.Windows.Point(
+                rand.Next(0, (int)(GameCanvas.ActualWidth / _cellSize)) * _cellSize,
+                rand.Next(0, (int)(GameCanvas.ActualHeight / _cellSize)) * _cellSize);
+
+            _food = new Rectangle
+            {
+                Width = _cellSize,
+                Height = _cellSize,
+                Fill = Brushes.Red
+            };
+
+            Canvas.SetLeft(_food, _foodPosition.X);
+            Canvas.SetTop(_food, _foodPosition.Y);
+            GameCanvas.Children.Add(_food);
+        }
+
+        private void GameOver()
+        {
+            _gameTimer.Stop();
+            MessageBox.Show("Игра окончена!");
+            GameCanvas.Visibility = Visibility.Collapsed;
+        }
+
     }
 }
