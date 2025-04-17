@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
@@ -16,8 +17,11 @@ namespace RobotSharpV2
         private VideoCapture _capture;
         private bool _isCapturing;
         private Mat _currentFrame = new Mat();
-        private int _binarizationLevel = 100;
         private System.Drawing.Point? _previousHandCenter = null;
+        private ScalarArray _lowerSkinColor = new ScalarArray(new MCvScalar(0, 48, 80));
+        private ScalarArray _upperSkinColor = new ScalarArray(new MCvScalar(20, 255, 255));
+        private bool _calibrationMode = false;
+        private int _binarizationLevel = 100;
 
         [DllImport("gdi32.dll")]
         private static extern bool DeleteObject(IntPtr handle);
@@ -39,11 +43,21 @@ namespace RobotSharpV2
             }
         }
 
+        private void CalibrateButton_Click(object sender, RoutedEventArgs e)
+        {
+            _calibrationMode = true;
+            MessageBox.Show("Пожалуйста, поместите руку в центр экрана для калибровки цвета кожи.");
+        }
+
         private async Task StartCaptureAsync()
         {
             try
             {
                 _capture = new VideoCapture(0);
+                _capture.Set(CapProp.FrameWidth, 640);
+                _capture.Set(CapProp.FrameHeight, 480);
+                _capture.Set(CapProp.Fps, 30);
+
                 _isCapturing = true;
                 StartStopButton.Content = "СТОП";
 
@@ -61,7 +75,8 @@ namespace RobotSharpV2
                                 {
                                     UpdateUI(processedFrame);
                                     UpdateMaskUI(maskFrame);
-                                    FrameRate.Text = $"Количество пальцев: {fingerCount}";
+                                    GestureStatus.Text = $"Количество пальцев: {fingerCount}";
+                                    MovementLabel.Text = $"Движение: {movementDirection}";
                                 });
                             }
                         }
@@ -76,196 +91,208 @@ namespace RobotSharpV2
             }
         }
 
+        private Mat FilterSkin(Mat inputFrame)
+        {
+            Mat hsvFrame = new Mat();
+            CvInvoke.CvtColor(inputFrame, hsvFrame, ColorConversion.Bgr2Hsv);
+            Mat hsvMask = new Mat();
+            CvInvoke.InRange(hsvFrame, _lowerSkinColor, _upperSkinColor, hsvMask);
+            Mat ycrcb = new Mat();
+            CvInvoke.CvtColor(inputFrame, ycrcb, ColorConversion.Bgr2YCrCb);
+            Mat ycrcbMask = new Mat();
+            ScalarArray lowerYCrCb = new ScalarArray(new MCvScalar(0, 133, 77));
+            ScalarArray upperYCrCb = new ScalarArray(new MCvScalar(255, 173, 127));
+            CvInvoke.InRange(ycrcb, lowerYCrCb, upperYCrCb, ycrcbMask);
+            Mat skinMask = new Mat();
+            CvInvoke.BitwiseAnd(hsvMask, ycrcbMask, skinMask);
+            var kernel = CvInvoke.GetStructuringElement(ElementShape.Ellipse, new System.Drawing.Size(5, 5), new System.Drawing.Point(-1, -1));
+            CvInvoke.MorphologyEx(skinMask, skinMask, MorphOp.Close, kernel, new System.Drawing.Point(-1, -1), 2, BorderType.Reflect, new MCvScalar(0));
+            CvInvoke.MorphologyEx(skinMask, skinMask, MorphOp.Open, kernel, new System.Drawing.Point(-1, -1), 2, BorderType.Reflect, new MCvScalar(0));
+
+            return skinMask;
+        }
+        private void BinarizationSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            _binarizationLevel = (int)e.NewValue;
+        }
+
         private Mat ProcessFrame(Mat inputFrame, out Mat maskFrame, out int fingerCount)
         {
             var outputFrame = inputFrame.Clone();
             maskFrame = new Mat();
             fingerCount = 0;
 
-            Mat grayFrame = new Mat();
-            Mat thresholdFrame = new Mat();
-            Mat blurredFrame = new Mat();
-            Mat medianFilteredFrame = new Mat();
-            Mat dilatedFrame = new Mat();
-            Mat erodedFrame = new Mat();
+            Mat lab = new Mat();
+            CvInvoke.CvtColor(inputFrame, lab, ColorConversion.Bgr2Lab);
+            VectorOfMat labChannels = new VectorOfMat();
+            CvInvoke.Split(lab, labChannels);
+            CvInvoke.EqualizeHist(labChannels[0], labChannels[0]);
+            CvInvoke.Merge(labChannels, lab);
+            CvInvoke.CvtColor(lab, inputFrame, ColorConversion.Lab2Bgr);
 
-            try
+            if (_calibrationMode)
             {
-                CvInvoke.CvtColor(inputFrame, grayFrame, ColorConversion.Bgr2Gray);
-                CvInvoke.Threshold(grayFrame, thresholdFrame, _binarizationLevel, 255, ThresholdType.Binary);
-                CvInvoke.GaussianBlur(inputFrame, grayFrame, new System.Drawing.Size(3, 3), 1);
-                CvInvoke.MedianBlur(thresholdFrame, medianFilteredFrame, 5);
-                thresholdFrame = medianFilteredFrame.Clone();
+                System.Drawing.Rectangle roi = new System.Drawing.Rectangle(
+                    inputFrame.Width / 2 - 50,
+                    inputFrame.Height / 2 - 50,
+                    100, 100);
 
-                var kernel = CvInvoke.GetStructuringElement(ElementShape.Rectangle, new System.Drawing.Size(7, 7), new System.Drawing.Point(-1, -1));
-                CvInvoke.MorphologyEx(thresholdFrame, dilatedFrame, MorphOp.Open, kernel, new System.Drawing.Point(-1, -1), 1, BorderType.Constant, new MCvScalar(0));
-                CvInvoke.Dilate(thresholdFrame, dilatedFrame, kernel, new System.Drawing.Point(-1, -1), 1, BorderType.Constant, new MCvScalar(1));
-                CvInvoke.Erode(dilatedFrame, erodedFrame, kernel, new System.Drawing.Point(-1, -1), 1, BorderType.Constant, new MCvScalar(1));
-                thresholdFrame = erodedFrame.Clone();
-
-                maskFrame = thresholdFrame.Clone();
-
-                using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
+                using (Mat calibrationRoi = new Mat(inputFrame, roi))
                 {
-                    Mat hierarchy = new Mat();
-                    CvInvoke.FindContours(
-                        thresholdFrame,
-                        contours,
-                        hierarchy,
-                        RetrType.External,
-                        ChainApproxMethod.ChainApproxSimple);
+                    CalibrateSkinColor(calibrationRoi);
+                }
+                _calibrationMode = false;
+                MessageBox.Show("Калибровка завершена!");
+            }
 
-                    for (int i = 0; i < contours.Size; i++)
+            // Фильтрация кожи
+            Mat skinMask = FilterSkin(inputFrame);
+            CvInvoke.BitwiseAnd(inputFrame, inputFrame, outputFrame, skinMask);
+
+            // Поиск контуров
+            using (VectorOfVectorOfPoint contours = new VectorOfVectorOfPoint())
+            {
+                Mat hierarchy = new Mat();
+                CvInvoke.FindContours(
+                    skinMask,
+                    contours,
+                    hierarchy,
+                    RetrType.External,
+                    ChainApproxMethod.ChainApproxSimple);
+
+                double maxArea = 0;
+                VectorOfPoint largestContour = null;
+                for (int i = 0; i < contours.Size; i++)
+                {
+                    double area = CvInvoke.ContourArea(contours[i]);
+                    if (area > maxArea && area > 5000) 
                     {
-                        var contour = contours[i];
-
-                        if (CvInvoke.ContourArea(contour) > 300) 
-                        {
-                            var moments = CvInvoke.Moments(contour);
-                            if (moments.M00 == 0) continue;
-
-                            int centerX = (int)(moments.M10 / moments.M00);
-                            int centerY = (int)(moments.M01 / moments.M00);
-                            var currentCenter = new System.Drawing.Point(centerX, centerY);
-
-                            CvInvoke.Circle(outputFrame, currentCenter, 5, new MCvScalar(0, 0, 255), -1);
-
-                            if (_previousHandCenter != null)
-                            {
-                                int dx = currentCenter.X - _previousHandCenter.Value.X;
-                                int dy = currentCenter.Y - _previousHandCenter.Value.Y;
-
-                                if (Math.Abs(dx) > Math.Abs(dy))
-                                {
-                                    if (dx > 15)
-                                        movementDirection = "Вправо";
-                                    else if (dx < -15)
-                                        movementDirection = "Влево";
-                                }
-                                else
-                                {
-                                    if (dy > 15)
-                                        movementDirection = "Вниз";
-                                    else if (dy < -15)
-                                        movementDirection = "Вверх";
-                                }
-                            }
-
-                            _previousHandCenter = currentCenter;
-
-                            Dispatcher.Invoke(() =>
-                            {
-                                MovementLabel.Text = $"Движение: {movementDirection}";
-                            });
-
-                            var hull = new VectorOfPoint();
-                            CvInvoke.ConvexHull(contour, hull, false);
-
-                            List<System.Windows.Point> fingertips;
-                            fingerCount += CountFingersUsingAngles(hull, out fingertips);
-
-                            for (int j = 0; j < fingertips.Count; j++)
-                            {
-                                var pt = fingertips[j];
-                                var drawingPoint = new System.Drawing.Point((int)pt.X, (int)pt.Y);
-
-                                CvInvoke.Circle(outputFrame, drawingPoint, 6, new MCvScalar(255, 0, 0), 2);
-                            }
-                        }
-                    }
-
-                    for (int i = 0; i < contours.Size; i++)
-                    {
-                        CvInvoke.DrawContours(outputFrame, contours, i, new MCvScalar(0, 255, 0), 2);
+                        maxArea = area;
+                        largestContour = contours[i];
                     }
                 }
-            }
-            finally
-            {
-                grayFrame.Dispose();
-                blurredFrame.Dispose();
-                medianFilteredFrame.Dispose();
-                dilatedFrame.Dispose();
-                erodedFrame.Dispose();
+
+                if (largestContour != null)
+                {                   VectorOfPoint approxContour = new VectorOfPoint();
+                    double epsilon = 0.01 * CvInvoke.ArcLength(largestContour, true);
+                    CvInvoke.ApproxPolyDP(largestContour, approxContour, epsilon, true);
+
+
+                    var moments = CvInvoke.Moments(largestContour);
+                    if (moments.M00 != 0)
+                    {
+                        int centerX = (int)(moments.M10 / moments.M00);
+                        int centerY = (int)(moments.M01 / moments.M00);
+                        var currentCenter = new System.Drawing.Point(centerX, centerY);
+
+                        CvInvoke.Circle(outputFrame, currentCenter, 5, new MCvScalar(0, 0, 255), -1);
+                        UpdateMovementDirection(currentCenter);
+
+                        fingerCount = CountFingersUsingConvexityDefects(approxContour, out List<System.Windows.Point> fingertips);
+
+                        CvInvoke.DrawContours(outputFrame, new VectorOfVectorOfPoint(largestContour), -1, new MCvScalar(0, 255, 0), 2);
+                        foreach (var pt in fingertips)
+                        {
+                            CvInvoke.Circle(outputFrame, new System.Drawing.Point((int)pt.X, (int)pt.Y), 6, new MCvScalar(255, 0, 0), 2);
+                        }
+                    }
+                }
+
+                maskFrame = skinMask.Clone();
             }
 
             return outputFrame;
         }
 
-
-
-
-        private int CountFingersUsingAngles(VectorOfPoint contour, out List<System.Windows.Point> fingertipPoints)
+        private void CalibrateSkinColor(Mat skinRegion)
         {
-            int fingerCount = 0;
-            fingertipPoints = new List<System.Windows.Point>();
+            Mat hsv = new Mat();
+            CvInvoke.CvtColor(skinRegion, hsv, ColorConversion.Bgr2Hsv);
 
+            MCvScalar mean = CvInvoke.Mean(hsv);
+            _lowerSkinColor = new ScalarArray(new MCvScalar(
+                Math.Max(0, mean.V0 - 10),
+                Math.Max(30, mean.V1 - 40),
+                Math.Max(60, mean.V2 - 40)));
+            _upperSkinColor = new ScalarArray(new MCvScalar(
+                Math.Min(25, mean.V0 + 10),
+                Math.Min(255, mean.V1 + 40),
+                Math.Min(255, mean.V2 + 40)));
+        }
+
+        private int CountFingersUsingConvexityDefects(VectorOfPoint contour, out List<System.Windows.Point> fingertipPoints)
+        {
+            fingertipPoints = new List<System.Windows.Point>();
+            if (contour.Size < 30) return 0;
+
+ 
             var hull = new VectorOfPoint();
             CvInvoke.ConvexHull(contour, hull, false);
 
-            System.Drawing.Point[] hullPoints = hull.ToArray();
-            if (hullPoints.Length < 5) 
-                return fingerCount;
+            var defects = new VectorOfInt();
+            CvInvoke.ConvexityDefects(contour, hull, defects);
 
-            System.Windows.Point[] wpfHullPoints = new System.Windows.Point[hullPoints.Length];
-            for (int i = 0; i < hullPoints.Length; i++)
+            int fingerCount = 0;
+            var defectArray = defects.ToArray();
+
+            for (int i = 0; i < defectArray.Length; i += 4)
             {
-                wpfHullPoints[i] = new System.Windows.Point(hullPoints[i].X, hullPoints[i].Y);
-            }
+                int startIdx = defectArray[i];
+                int endIdx = defectArray[i + 1];
+                int defectPtIdx = defectArray[i + 2];
+                float depth = defectArray[i + 3] / 256f;
 
-            for (int i = 0; i < wpfHullPoints.Length; i++)
-            {
-                System.Windows.Point pt1 = wpfHullPoints[i];
-                System.Windows.Point pt2 = wpfHullPoints[(i + 1) % wpfHullPoints.Length];
-                System.Windows.Point pt3 = wpfHullPoints[(i + 2) % wpfHullPoints.Length];
-
-                double angle = GetAngle(pt1, pt2, pt3);
-
-                if (angle > 45)
+                if (depth > 20)
                 {
-                    System.Windows.Point pt4 = wpfHullPoints[(i + 3) % wpfHullPoints.Length];
-                    double angleAfter = GetAngle(pt2, pt3, pt4);
+                    var startPt = new System.Drawing.Point(contour[startIdx].X, contour[startIdx].Y);
+                    var endPt = new System.Drawing.Point(contour[endIdx].X, contour[endIdx].Y);
+                    var defectPt = new System.Drawing.Point(contour[defectPtIdx].X, contour[defectPtIdx].Y);
 
-                    if (Math.Abs(angleAfter - 180) < 20)
+                    double angle = CalculateAngle(startPt, defectPt, endPt);
+                    if (angle < 90) 
                     {
-                        double distance = GetDistance(pt1, pt3);
-
-                        if (distance < 50)
-                        {
-                            fingertipPoints.Add(pt2);
-                            fingerCount++;
-                        }
+                        fingertipPoints.Add(new System.Windows.Point(startPt.X, startPt.Y));
+                        fingertipPoints.Add(new System.Windows.Point(endPt.X, endPt.Y));
+                        fingerCount++;
                     }
                 }
             }
 
-          
-            double contourPerimeter = CvInvoke.ArcLength(contour, true);
-            double contourArea = CvInvoke.ContourArea(contour);
 
-            if (contourArea > 200 && contourPerimeter / contourArea > 5)
-            {
-                fingerCount++;
-            }
+            fingerCount = fingerCount > 0 ? fingerCount + 1 : 0;
 
             return fingerCount;
         }
 
-
-
-        private double GetDistance(System.Windows.Point pt1, System.Windows.Point pt2)
+        private double CalculateAngle(System.Drawing.Point a, System.Drawing.Point b, System.Drawing.Point c)
         {
-            return Math.Sqrt(Math.Pow(pt2.X - pt1.X, 2) + Math.Pow(pt2.Y - pt1.Y, 2));
+            double ab = Math.Sqrt(Math.Pow(b.X - a.X, 2) + Math.Pow(b.Y - a.Y, 2));
+            double bc = Math.Sqrt(Math.Pow(b.X - c.X, 2) + Math.Pow(b.Y - c.Y, 2));
+            double ac = Math.Sqrt(Math.Pow(c.X - a.X, 2) + Math.Pow(c.Y - a.Y, 2));
+
+            return Math.Acos((ab * ab + bc * bc - ac * ac) / (2 * ab * bc)) * (180 / Math.PI);
         }
 
-        private double GetAngle(System.Windows.Point pt1, System.Windows.Point pt2, System.Windows.Point pt3)
+        private void UpdateMovementDirection(System.Drawing.Point currentCenter)
         {
-            double angle = Math.Abs(Math.Atan2(pt3.Y - pt2.Y, pt3.X - pt2.X) - Math.Atan2(pt1.Y - pt2.Y, pt1.X - pt2.X));
-            if (angle > Math.PI)
+            if (_previousHandCenter == null)
             {
-                angle -= Math.PI;
+                _previousHandCenter = currentCenter;
+                return;
             }
-            return angle * (180.0 / Math.PI);
+
+            int dx = currentCenter.X - _previousHandCenter.Value.X;
+            int dy = currentCenter.Y - _previousHandCenter.Value.Y;
+
+            if (Math.Sqrt(dx * dx + dy * dy) > 15) 
+            {
+                if (Math.Abs(dx) > Math.Abs(dy))
+                    movementDirection = dx > 0 ? "Вправо" : "Влево";
+                else
+                    movementDirection = dy > 0 ? "Вниз" : "Вверх";
+            }
+
+            _previousHandCenter = currentCenter;
         }
 
         private void UpdateUI(Mat frame)
@@ -296,12 +323,6 @@ namespace RobotSharpV2
                     DeleteObject(hBitmap);
                 }
             }
-        }
-
-      
-        private void BinarizationSlider_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-        {
-            _binarizationLevel = (int)e.NewValue;
         }
 
         private void StopCapture()
