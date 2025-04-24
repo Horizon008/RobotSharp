@@ -1,9 +1,11 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
-VisualStudioVersion = 17.13.35825.156 d17.13
+VisualStudioVersion = 17.13.35825.156
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RobotSharp", "RobotSharp\RobotSharp.csproj", "{2FA8AB7F-379B-46E2-9731-C94A26DA633D}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RobotSharpV2", "RobotSharpV2\RobotSharpV2.csproj", "{F91CFDBF-7B86-4C02-BDD5-7C22214B9BE5}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -15,6 +17,10 @@ Global
 		{2FA8AB7F-379B-46E2-9731-C94A26DA633D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2FA8AB7F-379B-46E2-9731-C94A26DA633D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2FA8AB7F-379B-46E2-9731-C94A26DA633D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F91CFDBF-7B86-4C02-BDD5-7C22214B9BE5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F91CFDBF-7B86-4C02-BDD5-7C22214B9BE5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F91CFDBF-7B86-4C02-BDD5-7C22214B9BE5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F91CFDBF-7B86-4C02-BDD5-7C22214B9BE5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

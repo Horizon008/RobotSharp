@@ -7,20 +7,20 @@
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
     <Grid>
-        <Image x:Name="CameraImage" Stretch="Uniform"
-               HorizontalAlignment="Center" VerticalAlignment="Center"/>
-        <Button x:Name="StartStopButton" Content="начать" 
-                Width="91" Height="26" Margin="20,20,0,0"
-                HorizontalAlignment="Left" VerticalAlignment="Top"
-                Click="StartStopButton_Click" RenderTransformOrigin="0.501,0.553">
-            <Button.RenderTransform>
-                <TransformGroup>
-                    <ScaleTransform/>
-                    <SkewTransform AngleX="-0.001"/>
-                    <RotateTransform/>
-                    <TranslateTransform X="0.003"/>
-                </TransformGroup>
-            </Button.RenderTransform>
-        </Button>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Image x:Name="CameraImage" Grid.Row="0" Stretch="Uniform"/>
+
+        <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10">
+            <Button x:Name="StartStopButton" Content="СТАРТ" 
+                    Click="StartStopButton_Click" Width="100" Margin="5"/>
+            <TextBlock x:Name="GestureStatus" Foreground="DarkRed" FontSize="16"
+                       Margin="10" VerticalAlignment="Center"/>
+            <TextBlock x:Name="FrameRate" Foreground="Blue" FontSize="14"
+                       Margin="10" VerticalAlignment="Center"/>
+        </StackPanel>
     </Grid>
 </Window>
