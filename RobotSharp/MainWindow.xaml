@@ -10,8 +10,17 @@
         <Image x:Name="CameraImage" Stretch="Uniform"
                HorizontalAlignment="Center" VerticalAlignment="Center"/>
         <Button x:Name="StartStopButton" Content="начать" 
-                Width="163" Height="30" Margin="10,10,0,0"
+                Width="91" Height="26" Margin="20,20,0,0"
                 HorizontalAlignment="Left" VerticalAlignment="Top"
-                Click="StartStopButton_Click"/>
+                Click="StartStopButton_Click" RenderTransformOrigin="0.501,0.553">
+            <Button.RenderTransform>
+                <TransformGroup>
+                    <ScaleTransform/>
+                    <SkewTransform AngleX="-0.001"/>
+                    <RotateTransform/>
+                    <TranslateTransform X="0.003"/>
+                </TransformGroup>
+            </Button.RenderTransform>
+        </Button>
     </Grid>
 </Window>
