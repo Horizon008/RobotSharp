@@ -36,7 +36,14 @@ namespace RobotSharpV2
 
         [DllImport("gdi32.dll")]
         private static extern bool DeleteObject(IntPtr handle);
-
+        private Rectangle _pongPaddleLeft;
+        private Rectangle _pongPaddleRight;
+        private Rectangle _pongBall;
+        private System.Windows.Point _pongBallDirection;
+        private double _paddleSpeed = 5;
+        private double _ballSpeedX = 3;
+        private double _ballSpeedY = 3;
+        private DispatcherTimer _pongGameTimer;
         public MainWindow()
         {
             InitializeComponent();
@@ -473,6 +480,52 @@ namespace RobotSharpV2
         private void PongGameButton_Click(object sender, RoutedEventArgs e)
         {
             //StartPongGame();
+        }
+        private void StartPongGame()
+        {
+
+            GameCanvas.Visibility = Visibility.Collapsed;
+
+
+            PongCanvas.Children.Clear();
+
+
+            _pongPaddleLeft = new Rectangle
+            {
+                Width = 15,
+                Height = 100,
+                Fill = Brushes.Blue
+            };
+            Canvas.SetLeft(_pongPaddleLeft, 20);
+            Canvas.SetTop(_pongPaddleLeft, PongCanvas.ActualHeight / 2 - _pongPaddleLeft.Height / 2);
+            PongCanvas.Children.Add(_pongPaddleLeft);
+
+            _pongPaddleRight = new Rectangle
+            {
+                Width = 15,
+                Height = 100,
+                Fill = Brushes.Red
+            };
+            Canvas.SetLeft(_pongPaddleRight, PongCanvas.ActualWidth - 40);
+            Canvas.SetTop(_pongPaddleRight, PongCanvas.ActualHeight / 2 - _pongPaddleRight.Height / 2);
+            PongCanvas.Children.Add(_pongPaddleRight);
+
+            _pongBall = new Rectangle
+            {
+                Width = 20,
+                Height = 20,
+                Fill = Brushes.White
+            };
+            Canvas.SetLeft(_pongBall, PongCanvas.ActualWidth / 2 - _pongBall.Width / 2);
+            Canvas.SetTop(_pongBall, PongCanvas.ActualHeight / 2 - _pongBall.Height / 2);
+            PongCanvas.Children.Add(_pongBall);
+
+            _pongBallDirection = new System.Windows.Point(1, 1);
+
+            _pongGameTimer = new DispatcherTimer();
+            _pongGameTimer.Interval = TimeSpan.FromMilliseconds(16);
+            //_pongGameTimer.Tick += PongGameLoop;
+            _pongGameTimer.Start();
         }
     }
 }
