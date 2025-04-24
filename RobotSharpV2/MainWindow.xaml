@@ -11,6 +11,8 @@
             <RowDefinition Height="4*"/>
             <RowDefinition Height="3*"/>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="4*" />
+
         </Grid.RowDefinitions>
 
         <Grid.ColumnDefinitions>
@@ -18,17 +20,19 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-
         <Canvas x:Name="GameCanvas" Grid.Row="0" Grid.ColumnSpan="2" Background="Black" Panel.ZIndex="0"/>
         <Image x:Name="CameraImage" Grid.Row="1" Grid.Column="0" Stretch="Uniform" Panel.ZIndex="1"/>
-
         <Image x:Name="MaskImage" Grid.Row="1" Grid.Column="1" Stretch="Uniform" Margin="10" Panel.ZIndex="1"/>
-        
+
         <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10" Panel.ZIndex="2">
             <Button x:Name="StartStopButton"  Content="СТАРТ" Click="StartStopButton_Click" Width="100"  Margin="5"/>
             <Button x:Name="SnakeGameButton" Content="ЗМЕЙКА" Click="SnakeGameButton_Click" Width="100"  Margin="5"/>
+            <Button x:Name="PongGameButton" Content="PONG" Click="PongGameButton_Click" Width="100"  Margin="5"/>
             <TextBlock x:Name="MovementLabel" FontSize="16" Margin="10"  Foreground="Blue"/>
             <Slider x:Name="BinarizationSlider" Minimum="0" Maximum="255" Value="100" TickFrequency="5"   IsSnapToTickEnabled="True"  VerticalAlignment="Center"   Width="200" Margin="10,0,0,0" ValueChanged="BinarizationSlider_ValueChanged"/>
         </StackPanel>
+
+
+        <Canvas x:Name="PongCanvas" Grid.Row="3" Grid.ColumnSpan="2" Background="Black" Panel.ZIndex="0"/>
     </Grid>
 </Window>

@@ -470,6 +470,9 @@ namespace RobotSharpV2
             MessageBox.Show("Игра окончена!");
             GameCanvas.Visibility = Visibility.Collapsed;
         }
-
+        private void PongGameButton_Click(object sender, RoutedEventArgs e)
+        {
+            //StartPongGame();
+        }
     }
 }
