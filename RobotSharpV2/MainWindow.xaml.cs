@@ -347,6 +347,7 @@ namespace RobotSharpV2
         private void SnakeGameButton_Click(object sender, RoutedEventArgs e)
         {
             StartSnakeGame();
+            this.SnakeGameButton.IsEnabled = false;
         }
 
         private void StartSnakeGame()
@@ -474,10 +475,12 @@ namespace RobotSharpV2
             _gameTimer.Stop();
             MessageBox.Show("Игра окончена!");
             GameCanvas.Visibility = Visibility.Collapsed;
+            this.SnakeGameButton.IsEnabled = true;
         }
         private void PongGameButton_Click(object sender, RoutedEventArgs e)
         {
             StartPongGame();
+            this.PongGameButton.IsEnabled = false;
         }
         private void StartPongGame()
         {
@@ -538,7 +541,7 @@ namespace RobotSharpV2
 
 
             if (ballY <= 0 || ballY >= PongCanvas.ActualHeight - _pongBall.Height)
-      {
+            {
                 _ballSpeedY = -_ballSpeedY;
                 ApplySpeedIncrease();
             }
@@ -632,6 +635,7 @@ namespace RobotSharpV2
             _pongGameTimer.Stop();
             MessageBox.Show("Игра Pong завершена!");
             PongCanvas.Visibility = Visibility.Collapsed;
+            this.PongGameButton.IsEnabled = true;
         }
     }
 }
