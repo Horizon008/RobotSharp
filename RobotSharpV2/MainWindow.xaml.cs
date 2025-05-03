@@ -537,7 +537,7 @@ namespace RobotSharpV2
             double ballY = Canvas.GetTop(_pongBall) + _ballSpeedY;
 
 
-            if (ballY <= 0  ballY >= PongCanvas.ActualHeight - _pongBall.Height)
+            if (ballY <= 0 || ballY >= PongCanvas.ActualHeight - _pongBall.Height)
       {
                 _ballSpeedY = -_ballSpeedY;
                 ApplySpeedIncrease();
@@ -569,8 +569,8 @@ namespace RobotSharpV2
                 _ballSpeedY += angleFactor;
             }
 
-            if (ballX <= 0  ballX >= PongCanvas.ActualWidth - _pongBall.Width)
-      {
+            if (ballX <= 0 || ballX >= PongCanvas.ActualWidth - _pongBall.Width)
+            {
 
                 GameOverPong();
             }
