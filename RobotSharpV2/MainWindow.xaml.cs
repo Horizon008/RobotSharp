@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
+﻿using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -173,7 +170,7 @@ namespace RobotSharpV2
                 for (int i = 0; i < contours.Size; i++)
                 {
                     double area = CvInvoke.ContourArea(contours[i]);
-                    if (area > maxArea && area > 5000) 
+                    if (area > maxArea && area > 5000)
                     {
                         maxArea = area;
                         largestContour = contours[i];
@@ -181,7 +178,8 @@ namespace RobotSharpV2
                 }
 
                 if (largestContour != null)
-                {                   VectorOfPoint approxContour = new VectorOfPoint();
+                {
+                    VectorOfPoint approxContour = new VectorOfPoint();
                     double epsilon = 0.01 * CvInvoke.ArcLength(largestContour, true);
                     CvInvoke.ApproxPolyDP(largestContour, approxContour, epsilon, true);
 
@@ -233,7 +231,7 @@ namespace RobotSharpV2
             fingertipPoints = new List<System.Windows.Point>();
             if (contour.Size < 30) return 0;
 
- 
+
             var hull = new VectorOfPoint();
             CvInvoke.ConvexHull(contour, hull, false);
 
@@ -257,7 +255,7 @@ namespace RobotSharpV2
                     var defectPt = new System.Drawing.Point(contour[defectPtIdx].X, contour[defectPtIdx].Y);
 
                     double angle = CalculateAngle(startPt, defectPt, endPt);
-                    if (angle < 90) 
+                    if (angle < 90)
                     {
                         fingertipPoints.Add(new System.Windows.Point(startPt.X, startPt.Y));
                         fingertipPoints.Add(new System.Windows.Point(endPt.X, endPt.Y));
@@ -292,7 +290,7 @@ namespace RobotSharpV2
             int dx = currentCenter.X - _previousHandCenter.Value.X;
             int dy = currentCenter.Y - _previousHandCenter.Value.Y;
 
-            if (Math.Sqrt(dx * dx + dy * dy) > 15) 
+            if (Math.Sqrt(dx * dx + dy * dy) > 15)
             {
                 if (Math.Abs(dx) > Math.Abs(dy))
                     movementDirection = dx > 0 ? "Влево" : "Вправо";
@@ -479,7 +477,7 @@ namespace RobotSharpV2
         }
         private void PongGameButton_Click(object sender, RoutedEventArgs e)
         {
-            //StartPongGame();
+            StartPongGame();
         }
         private void StartPongGame()
         {
@@ -524,8 +522,116 @@ namespace RobotSharpV2
 
             _pongGameTimer = new DispatcherTimer();
             _pongGameTimer.Interval = TimeSpan.FromMilliseconds(16);
-            //_pongGameTimer.Tick += PongGameLoop;
+            _pongGameTimer.Tick += PongGameLoop;
             _pongGameTimer.Start();
+        }
+        private void PongGameLoop(object sender, EventArgs e)
+        {
+            MoveBall();
+            MovePaddles();
+        }
+        private void MoveBall()
+        {
+
+            double ballX = Canvas.GetLeft(_pongBall) + _ballSpeedX;
+            double ballY = Canvas.GetTop(_pongBall) + _ballSpeedY;
+
+
+            if (ballY <= 0  ballY >= PongCanvas.ActualHeight - _pongBall.Height)
+      {
+                _ballSpeedY = -_ballSpeedY;
+                ApplySpeedIncrease();
+            }
+
+
+            if (ballX <= Canvas.GetLeft(_pongPaddleLeft) + _pongPaddleLeft.Width &&
+                ballY >= Canvas.GetTop(_pongPaddleLeft) &&
+                ballY <= Canvas.GetTop(_pongPaddleLeft) + _pongPaddleLeft.Height)
+            {
+                _ballSpeedX = -_ballSpeedX;
+                ApplySpeedIncrease();
+
+                double hitPosition = (ballY - Canvas.GetTop(_pongPaddleLeft)) / _pongPaddleLeft.Height;
+                double angleFactor = (hitPosition - 0.5) * 2;
+                _ballSpeedY += angleFactor;
+            }
+
+            if (ballX >= Canvas.GetLeft(_pongPaddleRight) - _pongBall.Width &&
+                ballY >= Canvas.GetTop(_pongPaddleRight) &&
+                ballY <= Canvas.GetTop(_pongPaddleRight) + _pongPaddleRight.Height)
+            {
+                _ballSpeedX = -_ballSpeedX;
+                ApplySpeedIncrease();
+
+
+                double hitPosition = (ballY - Canvas.GetTop(_pongPaddleRight)) / _pongPaddleRight.Height;
+                double angleFactor = (hitPosition - 0.5) * 2;
+                _ballSpeedY += angleFactor;
+            }
+
+            if (ballX <= 0  ballX >= PongCanvas.ActualWidth - _pongBall.Width)
+      {
+
+                GameOverPong();
+            }
+
+
+            Canvas.SetLeft(_pongBall, ballX);
+            Canvas.SetTop(_pongBall, ballY);
+        }
+        private double _ballSpeedIncreaseFactor = 1.05;
+        private double _maxBallSpeed = 20.0;
+        private void ApplySpeedIncrease()
+        {
+
+            _ballSpeedX *= _ballSpeedIncreaseFactor;
+            _ballSpeedY *= _ballSpeedIncreaseFactor;
+
+
+            if (Math.Abs(_ballSpeedX) > _maxBallSpeed)
+            {
+                _ballSpeedX = _maxBallSpeed * Math.Sign(_ballSpeedX);
+            }
+
+            if (Math.Abs(_ballSpeedY) > _maxBallSpeed)
+            {
+                _ballSpeedY = _maxBallSpeed * Math.Sign(_ballSpeedY);
+            }
+        }
+        private void MovePaddles()
+        {
+            if (movementDirection == "Вверх" && Canvas.GetTop(_pongPaddleLeft) > 0)
+            {
+                Canvas.SetTop(_pongPaddleLeft, Canvas.GetTop(_pongPaddleLeft) - _paddleSpeed);
+            }
+            if (movementDirection == "Вниз" && Canvas.GetTop(_pongPaddleLeft) < PongCanvas.ActualHeight - _pongPaddleLeft.Height)
+            {
+                Canvas.SetTop(_pongPaddleLeft, Canvas.GetTop(_pongPaddleLeft) + _paddleSpeed);
+            }
+
+            SmartMoveRightPaddle();
+        }
+
+        private void SmartMoveRightPaddle()
+        {
+            double paddleCenter = Canvas.GetTop(_pongPaddleRight) + _pongPaddleRight.Height / 2;
+            double ballCenter = Canvas.GetTop(_pongBall) + _pongBall.Height / 2;
+
+
+            if (ballCenter < paddleCenter && Canvas.GetTop(_pongPaddleRight) > 0)
+            {
+                Canvas.SetTop(_pongPaddleRight, Canvas.GetTop(_pongPaddleRight) - _paddleSpeed);
+            }
+            else if (ballCenter > paddleCenter && Canvas.GetTop(_pongPaddleRight) < PongCanvas.ActualHeight - _pongPaddleRight.Height)
+            {
+                Canvas.SetTop(_pongPaddleRight, Canvas.GetTop(_pongPaddleRight) + _paddleSpeed);
+            }
+        }
+        private void GameOverPong()
+        {
+            _pongGameTimer.Stop();
+            MessageBox.Show("Игра Pong завершена!");
+            PongCanvas.Visibility = Visibility.Collapsed;
         }
     }
 }
