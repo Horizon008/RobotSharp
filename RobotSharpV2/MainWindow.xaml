@@ -5,7 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:RobotSharpV2"
         mc:Ignorable="d"
-        Title="Робот-Zmейка" Height="600" Width="900">
+        Title="РоботZ-Pong" Height="600" Width="1200">
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="4*"/>
@@ -27,9 +27,9 @@
         <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" HorizontalAlignment="Center" Margin="10" Panel.ZIndex="2">
             <Button x:Name="StartStopButton"  Content="СТАРТ" Click="StartStopButton_Click" Width="100"  Margin="5"/>
             <Button x:Name="SnakeGameButton" Content="ЗМЕЙКА" Click="SnakeGameButton_Click" Width="100"  Margin="5"/>
-            <Button x:Name="PongGameButton" Content="PONG" Click="PongGameButton_Click" Width="100"  Margin="5"/>
+            <Button x:Name="PongGameButton" Content="ПОНГ" Click="PongGameButton_Click" Width="100"  Margin="5"/>
             <TextBlock x:Name="MovementLabel" FontSize="16" Margin="10"  Foreground="Blue"/>
-            <Slider x:Name="BinarizationSlider" Minimum="0" Maximum="255" Value="100" TickFrequency="5"   IsSnapToTickEnabled="True"  VerticalAlignment="Center"   Width="200" Margin="10,0,0,0" ValueChanged="BinarizationSlider_ValueChanged"/>
+            <Slider x:Name="BinarizationSlider" Minimum="0" Maximum="255" Value="100" TickFrequency="5" Visibility="Hidden"  IsSnapToTickEnabled="True"  VerticalAlignment="Center"   Width="200" Margin="10,0,0,0" ValueChanged="BinarizationSlider_ValueChanged"/>
         </StackPanel>
 
 
